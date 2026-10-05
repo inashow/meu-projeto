@@ -17,7 +17,7 @@ resource "docker_container" "web" {
   name  = "meu-container-web"
   image = docker_image.nginx.image_id
 
-ports {
+  ports {
     internal = 80
     external = 8081
   }
@@ -42,7 +42,7 @@ resource "docker_container" "db" {
   image = docker_image.postgres.image_id
   env   = ["POSTGRES_PASSWORD=senha123"]
 
-ports {
+  ports {
     internal = 5432
     external = 5432
   }
