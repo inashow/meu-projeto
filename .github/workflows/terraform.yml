@@ -37,3 +37,23 @@ jobs:
         run: |
           sleep 5
           docker ps
+
+      - name: Teste de persistencia do banco - Lab2
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          for tentativa in $(seq 1 30); do
+            if docker exec meu-container-db pg_isready -U postgres; then
+              break
+            fi
+            sleep 2
+          done
+
+          docker exec meu-container-db psql -U postgres -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS teste_persistencia (texto TEXT);"
+
+          echo "ANTES de inserir nesta execucao:"
+          docker exec meu-container-db psql -U postgres -v ON_ERROR_STOP=1 -c "SELECT * FROM teste_persistencia;"
+
+          docker exec meu-container-db psql -U postgres -v ON_ERROR_STOP=1 -c "INSERT INTO teste_persistencia VALUES ('Mensagem criada pela pipeline');"
+
+          echo "DEPOIS de inserir nesta execucao:"
+          docker exec meu-container-db psql -U postgres -v ON_ERROR_STOP=1 -c "SELECT * FROM teste_persistencia;"
