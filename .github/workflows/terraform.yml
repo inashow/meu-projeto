@@ -37,6 +37,7 @@ jobs:
         run: |
           sleep 5
           docker ps
+          curl -fsS http://localhost:8081 | grep -F "Atualizado via pipeline"
 
       - name: Teste de persistencia do banco - Lab2
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
