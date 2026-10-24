@@ -14,18 +14,21 @@ resource "docker_image" "nginx" {
 }
 
 resource "docker_container" "web" {
+  networks_advanced {
+    name = docker_network.monitoring.name
+  }
   name  = "meu-container-web"
   image = docker_image.nginx.image_id
 
   ports {
     internal = 80
-    external = 8081
+    external = 8080
   }
 
   volumes {
     host_path      = "${path.cwd}/site"
     container_path = "/usr/share/nginx/html"
-    read_only      = false
+    read_only      = true
   }
 }
 
@@ -38,6 +41,9 @@ resource "docker_image" "postgres" {
 }
 
 resource "docker_container" "db" {
+  networks_advanced {
+    name = docker_network.monitoring.name
+  }
   name  = "meu-container-db"
   image = docker_image.postgres.image_id
   env   = ["POSTGRES_PASSWORD=senha123"]
@@ -50,5 +56,115 @@ resource "docker_container" "db" {
   volumes {
     volume_name    = docker_volume.db_data.name
     container_path = "/var/lib/postgresql/data"
+  }
+}
+
+resource "docker_network" "monitoring" {
+  name = "monitoring-net"
+}
+
+resource "docker_image" "cadvisor" {
+  name = "gcr.io/cadvisor/cadvisor:latest"
+}
+
+resource "docker_container" "cadvisor" {
+  name       = "cadvisor"
+  image      = docker_image.cadvisor.image_id
+  privileged = true
+
+  ports {
+    internal = 8080
+    external = 8081
+  }
+
+  volumes {
+    host_path      = "/"
+    container_path = "/rootfs"
+    read_only      = true
+  }
+
+  volumes {
+    host_path      = "/var/run"
+    container_path = "/var/run"
+    read_only      = true
+  }
+
+  volumes {
+    host_path      = "/sys"
+    container_path = "/sys"
+    read_only      = true
+  }
+
+  volumes {
+    host_path      = "/var/lib/docker"
+    container_path = "/var/lib/docker"
+    read_only      = true
+  }
+
+  volumes {
+    host_path      = "/dev/disk"
+    container_path = "/dev/disk"
+    read_only      = true
+  }
+
+  devices {
+    host_path      = "/dev/kmsg"
+    container_path = "/dev/kmsg"
+    permissions    = "rwm"
+  }
+
+  networks_advanced {
+    name = docker_network.monitoring.name
+  }
+}
+
+resource "docker_image" "prometheus" {
+  name = "prom/prometheus:latest"
+}
+
+resource "docker_container" "prometheus" {
+  name  = "prometheus"
+  image = docker_image.prometheus.image_id
+
+  ports {
+    internal = 9090
+    external = 9090
+  }
+
+  volumes {
+    host_path      = "${path.cwd}/prometheus.yml"
+    container_path = "/etc/prometheus/prometheus.yml"
+    read_only      = true
+  }
+
+  networks_advanced {
+    name = docker_network.monitoring.name
+  }
+}
+
+resource "docker_image" "grafana" {
+  name = "grafana/grafana:latest"
+}
+
+resource "docker_volume" "grafana_data" {
+  name = "meu-projeto-grafana-data"
+}
+
+resource "docker_container" "grafana" {
+  name  = "grafana"
+  image = docker_image.grafana.image_id
+
+  ports {
+    internal = 3000
+    external = 3000
+  }
+
+  volumes {
+    volume_name    = docker_volume.grafana_data.name
+    container_path = "/var/lib/grafana"
+  }
+
+  networks_advanced {
+    name = docker_network.monitoring.name
   }
 }
